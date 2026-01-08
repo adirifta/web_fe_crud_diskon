@@ -75,7 +75,7 @@ export function useDiscountApi() {
 
   const updateDiscount = async (id, discountData) => {
     try {
-      // Validasi nama unik (kecuali untuk diskon yang sama)
+      // Validasi nama unik
       const existing = discounts.value.find(d =>
         d._id !== id &&
         d.name.toLowerCase() === discountData.name.toLowerCase()
@@ -142,8 +142,33 @@ export function useDiscountApi() {
     }
   }
 
-  const getDiscountById = (id) => {
-    return discounts.value.find(d => d._id === id)
+  const getDiscountById = async (id) => {
+    try {
+      const cachedDiscount = discounts.value.find(d => d._id === id)
+      if (cachedDiscount) {
+        return cachedDiscount
+      }
+
+      loading.value = true
+      const response = await apiService.get(`diskon/${id}`)
+      loading.value = false
+
+      if (response && response._id) {
+        return response
+      }
+
+      return null
+    } catch (err) {
+      loading.value = false
+      console.error('Error fetching discount by ID:', err)
+
+      if (err.message.includes('koneksi') || err.message.includes('respons')) {
+        const mockData = getMockDiscounts()
+        return mockData.find(d => d._id === id) || null
+      }
+
+      return null
+    }
   }
 
   const searchDiscounts = (query) => {

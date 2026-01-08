@@ -36,7 +36,6 @@ class ApiService {
       this.loadConfig()
     }
 
-    // Jika ada full URL yang disimpan (untuk custom API URL)
     const savedFullUrl = localStorage.getItem('discountApiUrl')
     if (savedFullUrl && endpoint === 'diskon') {
       return savedFullUrl
@@ -50,7 +49,6 @@ class ApiService {
     try {
       const urlObj = new URL(url)
       const parts = urlObj.pathname.split('/')
-      // URL format: /api/{token}/diskon
       if (parts.length >= 3) {
         return parts[2]
       }

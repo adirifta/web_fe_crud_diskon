@@ -2,9 +2,27 @@
   <div class="home-view">
     <!-- Title Section -->
     <div class="title-section">
-      <h2>Daftar Diskon</h2>
-      <div class="outlet-badge">
-        Kopi Anak Bangsa
+      <div class="title-left">
+        <h2>Daftar Diskon</h2>
+        <!-- Outlet Dropdown -->
+        <div class="outlet-dropdown" @click="toggleOutletDropdown">
+          <div class="outlet-selected">
+            <span class="outlet-name">Kopi Anak Bangsa</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          <div v-if="showOutletDropdown" class="outlet-dropdown-menu">
+            <div class="outlet-item" @click="selectOutlet('Kopi Anak Bangsa')">
+              <span class="outlet-icon">🏪</span>
+              <span class="outlet-text">Kopi Anak Bangsa</span>
+              <span v-if="selectedOutlet === 'Kopi Anak Bangsa'" class="check-icon">✓</span>
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="outlet-item" @click="toggleApiConfig">
+              <span class="outlet-icon">⚙️</span>
+              <span class="outlet-text">Konfigurasi API</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -13,11 +31,6 @@
 
     <!-- Main Content -->
     <div class="content-wrapper">
-      <!-- API Configuration (Hidden by default) -->
-      <div v-if="showApiConfig" class="api-config-section">
-        <ApiConfig @api-updated="fetchDiscounts" />
-      </div>
-
       <!-- Discounts List or Empty State -->
       <div v-if="discounts.length > 0" class="discounts-container">
         <!-- Stats and Search -->
@@ -70,11 +83,6 @@
           <span>Tambah diskon</span>
         </router-link>
       </div>
-
-      <!-- Settings Button -->
-      <button class="settings-button" @click="toggleApiConfig">
-        <span class="settings-icon">⚙️</span>
-      </button>
     </div>
 
     <!-- Delete Modal -->
@@ -85,6 +93,11 @@
       @cancel="closeDeleteModal"
     />
 
+    <ApiConfigModal
+      v-model:show="showApiConfig"
+      @api-updated="fetchDiscounts"
+    />
+
     <!-- Notification -->
     <div v-if="notification.show" class="notification" :class="notification.type">
       {{ notification.message }}
@@ -93,12 +106,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DiscountList from '../components/DiscountList.vue'
 import DeleteModal from '../components/DeleteModal.vue'
-import ApiConfig from '../components/ApiConfig.vue'
+import ApiConfig from '../components/ApiConfigModal.vue'
 import { useDiscountApi } from '../composables/useDiscountApi'
+import ApiConfigModal from '../components/ApiConfigModal.vue'
 
 // Import image
 import emptyDiscountImage from '@/assets/empty-state.svg'
@@ -107,7 +121,8 @@ export default {
   components: {
     DiscountList,
     DeleteModal,
-    ApiConfig
+    ApiConfig,
+    ApiConfigModal
   },
   setup() {
     const router = useRouter()
@@ -124,6 +139,9 @@ export default {
     const discountToDelete = ref(null)
     const notification = ref({ show: false, message: '', type: 'success' })
     const showApiConfig = ref(false)
+
+    const showOutletDropdown = ref(false)
+    const selectedOutlet = ref('Kopi Anak Bangsa')
 
     const filteredDiscounts = computed(() => {
       if (!searchQuery.value) return discounts.value
@@ -175,8 +193,33 @@ export default {
       showApiConfig.value = !showApiConfig.value
     }
 
+    // Tambahkan fungsi untuk dropdown
+    const toggleOutletDropdown = () => {
+      showOutletDropdown.value = !showOutletDropdown.value
+    }
+
+    const selectOutlet = (outlet) => {
+      selectedOutlet.value = outlet
+      showOutletDropdown.value = false
+      // Di sini bisa tambahkan logika untuk filter berdasarkan outlet
+    }
+
+    // Close dropdown ketika klik di luar
+    const handleClickOutside = (event) => {
+      const dropdown = document.querySelector('.outlet-dropdown')
+      if (dropdown && !dropdown.contains(event.target)) {
+        showOutletDropdown.value = false
+      }
+    }
+
+    // Event listener untuk klik di luar dropdown
     onMounted(() => {
       fetchDiscounts()
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
     })
 
     return {
@@ -187,6 +230,8 @@ export default {
       discountToDelete,
       notification,
       showApiConfig,
+      showOutletDropdown,
+      selectedOutlet,
       filterDiscounts,
       editDiscount,
       confirmDelete,
@@ -194,6 +239,8 @@ export default {
       closeDeleteModal,
       showNotification,
       toggleApiConfig,
+      toggleOutletDropdown,
+      selectOutlet,
       fetchDiscounts,
       emptyDiscountImage
     }
@@ -211,8 +258,15 @@ export default {
 .title-section {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 20px;
+  position: relative;
+}
+
+.title-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .title-section h2 {
@@ -222,29 +276,97 @@ export default {
   margin: 0;
 }
 
-.outlet-badge {
-  background: rgba(61, 174, 47, 0.1);
-  border: 1px solid #3DAE2F;
-  border-radius: 20px;
-  padding: 6px 16px;
+/* Outlet Dropdown */
+.outlet-dropdown {
+  padding-top: 10px;
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+}
+
+.outlet-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #7c7c7c;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.outlet-selected:hover {
+  background: rgba(113, 113, 113, 0.15);
+}
+
+.outlet-name {
+  font-weight: 500;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.outlet-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.outlet-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.outlet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.outlet-item:hover {
+  background: #f5f5f5;
+}
+
+.outlet-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.outlet-text {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.check-icon {
   color: #3DAE2F;
+  font-weight: bold;
 }
 
-/* Divider */
-.divider {
+.dropdown-divider {
   height: 1px;
-  background: linear-gradient(90deg,
-    rgba(224, 224, 224, 0) 0%,
-    rgba(224, 224, 224, 1) 50%,
-    rgba(224, 224, 224, 0) 100%);
-  margin: 24px 0;
+  background: #e0e0e0;
+  margin: 4px 0;
 }
 
-/* Content Wrapper */
-.content-wrapper {
-  position: relative;
+.title-actions {
+  display: flex;
+  align-items: center;
 }
 
 /* API Config Section */
@@ -253,7 +375,7 @@ export default {
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 24px;
+  margin: 24px 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -356,14 +478,10 @@ export default {
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 60px 40px;
+  padding: 50px 40px;
   border-radius: 12px;
   margin: 40px auto;
   max-width: 480px;
-}
-
-.empty-state-image {
-  margin-bottom: 32px;
 }
 
 .empty-image {
@@ -480,38 +598,40 @@ export default {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .home-view {
-    padding: 24px 0 48px;
-  }
-
   .title-section {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .controls-section {
-    flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
 
-  .search-container {
-    max-width: 100%;
+  .title-left {
+    width: 100%;
   }
 
-  .empty-state {
-    padding: 40px 24px;
-    margin: 24px 0;
+  .outlet-dropdown {
+    width: 100%;
   }
 
-  .empty-image {
-    width: 120px;
-    height: 120px;
+  .outlet-selected {
+    width: 100%;
+    justify-content: space-between;
   }
 
+  .outlet-dropdown-menu {
+    width: 100%;
+    left: 0;
+    right: 0;
+  }
+
+  .title-actions {
+    justify-content: flex-end;
+  }
+
+  /* Tampilkan settings button di mobile jika diperlukan */
   .settings-button {
-    bottom: 80px;
-    right: 16px;
+    display: flex;
+    position: static;
+    transform: none;
   }
 }
 

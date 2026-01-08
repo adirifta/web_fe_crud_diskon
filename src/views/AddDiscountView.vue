@@ -41,12 +41,16 @@ export default {
     const notification = ref({ show: false, message: '', type: 'success' })
 
     // Cek jika dalam mode edit
-    onMounted(() => {
+    onMounted(async () => {
       if (route.params.id) {
         // Load discount data untuk edit
-        editingDiscount.value = getDiscountById(route.params.id)
+        editingDiscount.value = await getDiscountById(route.params.id)
+
         if (!editingDiscount.value) {
-          router.push('/')
+          showNotification('Diskon tidak ditemukan', 'error')
+          setTimeout(() => {
+            router.push('/')
+          }, 2000)
         }
       }
     })

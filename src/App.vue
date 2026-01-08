@@ -57,7 +57,7 @@ main {
 }
 
 footer {
-  padding: 20px 0;
+  padding-bottom: 30px;
   margin-top: auto;
 }
 
